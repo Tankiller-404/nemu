@@ -13,7 +13,8 @@ enum {
 	TK_NEQ,
 	TK_AND,
 	TK_DEREF,
-	TK_NEG
+	TK_NEG,
+	TK_NOT
 };
 
 static struct rule {
@@ -27,6 +28,7 @@ static struct rule {
 	{"==", TK_EQ},
 	{"!=", TK_NEQ},
 	{"&&", TK_AND},
+	{"!", TK_NOT},
 	{"\\+", '+'},
 	{"-", '-'},
 	{"\\*", '*'},
@@ -279,13 +281,17 @@ static uint32_t eval(int p, int q, bool *success) {
 		}
 	}
 
-	if(tokens[p].type == TK_NEG || tokens[p].type == TK_DEREF) {
+	if(tokens[p].type == TK_NEG || tokens[p].type == TK_DEREF ||
+			tokens[p].type == TK_NOT) {
 		rhs = eval(p + 1, q, success);
 		if(!*success) {
 			return 0;
 		}
 		if(tokens[p].type == TK_NEG) {
 			return 0 - rhs;
+		}
+		if(tokens[p].type == TK_NOT) {
+			return !rhs;
 		}
 		return swaddr_read(rhs, 4);
 	}
