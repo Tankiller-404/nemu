@@ -251,6 +251,9 @@ static uint32_t eval(int p, int q, bool *success) {
 		if(!*success) {
 			return 0;
 		}
+		if(tokens[op].type == TK_AND && lhs == 0) {
+			return 0;
+		}
 		rhs = eval(op + 1, q, success);
 		if(!*success) {
 			return 0;
@@ -269,7 +272,7 @@ static uint32_t eval(int p, int q, bool *success) {
 				return lhs / rhs;
 			case TK_EQ: return lhs == rhs;
 			case TK_NEQ: return lhs != rhs;
-			case TK_AND: return lhs && rhs;
+			case TK_AND: return rhs != 0;
 			default:
 				*success = false;
 				return 0;
