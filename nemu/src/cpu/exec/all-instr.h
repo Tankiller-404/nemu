@@ -4,6 +4,7 @@
 #include "data-mov/xchg.h"
 #include "data-mov/movext.h"
 #include "data-mov/cltd.h"
+#include "data-mov/stack.h"
 
 #include "arith/adc.h"
 #include "arith/dec.h"
@@ -15,13 +16,16 @@
 #include "arith/div.h"
 #include "arith/sbb.h"
 #include "arith/sub.h"
+#include "arith/cmp.h"
 
 #include "control/jmp.h"
+#include "control/task1.h"
 
 #include "logic/and.h"
 #include "logic/or.h"
 #include "logic/not.h"
 #include "logic/xor.h"
+#include "logic/test.h"
 #include "logic/sar.h"
 #include "logic/shl.h"
 #include "logic/shr.h"
@@ -35,4 +39,3 @@
 #include "misc/misc.h"
 
 #include "special/special.h"
-
