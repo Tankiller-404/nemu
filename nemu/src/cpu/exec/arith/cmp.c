@@ -1,14 +1,19 @@
 #include "cpu/exec/helper.h"
 
-make_helper(cmp_si2rm_l) {
-	int len = decode_si2rm_l(eip + 1);
-	uint32_t result = op_dest->val - op_src->val;
+#define DATA_BYTE 1
+#include "cmp-template.h"
+#undef DATA_BYTE
 
-	update_eflags_pf_zf_sf(result);
-	cpu.eflags.CF = op_dest->val < op_src->val;
-	cpu.eflags.OF = ((op_dest->val ^ op_src->val) &
-		(op_dest->val ^ result)) >> 31;
+#define DATA_BYTE 2
+#include "cmp-template.h"
+#undef DATA_BYTE
 
-	print_asm("cmpl %s,%s", op_src->str, op_dest->str);
-	return len + 1;
-}
+#define DATA_BYTE 4
+#include "cmp-template.h"
+#undef DATA_BYTE
+
+make_helper_v(cmp_i2a)
+make_helper_v(cmp_i2rm)
+make_helper_v(cmp_si2rm)
+make_helper_v(cmp_r2rm)
+make_helper_v(cmp_rm2r)

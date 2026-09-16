@@ -11,6 +11,16 @@ make_helper(call_rel_l) {
 	return 5;
 }
 
+make_helper(call_rm_l) {
+	int len = decode_rm_l(eip + 1);
+	uint32_t return_address = eip + len + 1;
+	cpu.esp -= 4;
+	swaddr_write(cpu.esp, 4, return_address);
+	cpu.eip = op_src->val - (len + 1);
+	print_asm("call *%s", op_src->str);
+	return len + 1;
+}
+
 make_helper(je_si_b) {
 	int8_t displacement = (int8_t)instr_fetch(eip + 1, 1);
 	if(cpu.eflags.ZF) {
