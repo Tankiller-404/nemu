@@ -1,8 +1,8 @@
 #include "FLOAT.h"
+#include <stdint.h>
 
 FLOAT F_mul_F(FLOAT a, FLOAT b) {
-	nemu_assert(0);
-	return 0;
+	return ((int64_t)a * b) >> 16;
 }
 
 FLOAT F_div_F(FLOAT a, FLOAT b) {
@@ -24,8 +24,13 @@ FLOAT F_div_F(FLOAT a, FLOAT b) {
 	 * out another way to perform the division.
 	 */
 
-	nemu_assert(0);
-	return 0;
+	int32_t quotient, remainder;
+	uint32_t low = (uint32_t)a << 16;
+	int32_t high = a >> 16;
+	asm volatile ("idivl %2"
+			: "=a"(quotient), "=d"(remainder)
+			: "r"(b), "a"(low), "d"(high));
+	return quotient;
 }
 
 FLOAT f2F(float a) {
@@ -39,13 +44,23 @@ FLOAT f2F(float a) {
 	 * performing arithmetic operations on it directly?
 	 */
 
-	nemu_assert(0);
-	return 0;
+	uint32_t bits = *(uint32_t *)&a;
+	uint32_t exponent = (bits >> 23) & 0xff;
+	uint32_t fraction = bits & 0x7fffff;
+	uint32_t mantissa;
+	int shift;
+
+	if(exponent == 0) return 0;
+	mantissa = (1 << 23) | fraction;
+	shift = (int)exponent - 127 - 23 + 16;
+	if(shift >= 0) mantissa <<= shift;
+	else mantissa >>= -shift;
+
+	return bits >> 31 ? -mantissa : mantissa;
 }
 
 FLOAT Fabs(FLOAT a) {
-	nemu_assert(0);
-	return 0;
+	return a < 0 ? -a : a;
 }
 
 /* Functions below are already implemented */
@@ -73,4 +88,3 @@ FLOAT pow(FLOAT x, FLOAT y) {
 
 	return t;
 }
-
