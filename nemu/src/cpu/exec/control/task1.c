@@ -39,3 +39,12 @@ make_helper(ret) {
 	print_asm("ret");
 	return 1;
 }
+
+make_helper(ret_i_w) {
+	uint16_t adjustment = instr_fetch(eip + 1, 2);
+	uint32_t target = swaddr_read(cpu.esp, 4);
+	cpu.esp += 4 + adjustment;
+	cpu.eip = target - 3;
+	print_asm("ret $0x%x", adjustment);
+	return 3;
+}
