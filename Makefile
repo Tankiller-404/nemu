@@ -53,8 +53,8 @@ clean: clean-cpp
 
 ##### some convinient rules #####
 
-USERPROG := obj/testcase/quadratic-eq
-ENTRY := $(USERPROG)
+USERPROG := obj/testcase/hello-str
+ENTRY := obj/kernel/kernel
 
 entry: $(ENTRY)
 	objcopy -S -O binary $(ENTRY) entry
