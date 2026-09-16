@@ -1,4 +1,5 @@
 #include "nemu.h"
+#include "monitor/elf.h"
 
 #include <regex.h>
 #include <stdlib.h>
@@ -9,6 +10,7 @@ enum {
 	TK_DEC,
 	TK_HEX,
 	TK_REG,
+	TK_VAR,
 	TK_EQ,
 	TK_NEQ,
 	TK_AND,
@@ -25,6 +27,7 @@ static struct rule {
 	{"0[xX][0-9a-fA-F]+", TK_HEX},
 	{"[0-9]+", TK_DEC},
 	{"\\$[a-zA-Z][a-zA-Z0-9]*", TK_REG},
+	{"[a-zA-Z_][a-zA-Z0-9_]*", TK_VAR},
 	{"==", TK_EQ},
 	{"!=", TK_NEQ},
 	{"&&", TK_AND},
@@ -65,7 +68,8 @@ static Token tokens[NR_TOKEN];
 static int nr_token;
 
 static bool is_value_token(int type) {
-	return type == TK_DEC || type == TK_HEX || type == TK_REG || type == ')';
+	return type == TK_DEC || type == TK_HEX || type == TK_REG ||
+		type == TK_VAR || type == ')';
 }
 
 static bool make_token(char *e) {
@@ -203,6 +207,7 @@ static uint32_t eval(int p, int q, bool *success) {
 	}
 
 	if(p == q) {
+		uint32_t variable;
 		switch(tokens[p].type) {
 			case TK_DEC:
 				return (uint32_t)strtoul(tokens[p].str, NULL, 10);
@@ -210,6 +215,11 @@ static uint32_t eval(int p, int q, bool *success) {
 				return (uint32_t)strtoul(tokens[p].str, NULL, 16);
 			case TK_REG:
 				return register_value(tokens[p].str, success);
+			case TK_VAR:
+				if(elf_get_variable(tokens[p].str, &variable)) return variable;
+				printf("Unknown variable '%s'.\n", tokens[p].str);
+				*success = false;
+				return 0;
 			default:
 				*success = false;
 				return 0;

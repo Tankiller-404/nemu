@@ -1,4 +1,6 @@
 #include "common.h"
+#include "monitor/elf.h"
+#include "memory/memory.h"
 #include <stdlib.h>
 #include <elf.h>
 
@@ -81,3 +83,36 @@ void load_elf_tables(int argc, char *argv[]) {
 	fclose(fp);
 }
 
+bool elf_get_variable(const char *name, uint32_t *value) {
+	int i;
+
+	for(i = 0; i < nr_symtab_entry; i ++) {
+		Elf32_Sym *sym = &symtab[i];
+		if(ELF32_ST_TYPE(sym->st_info) != STT_OBJECT ||
+				sym->st_shndx == SHN_UNDEF) {
+			continue;
+		}
+		if(strcmp(strtab + sym->st_name, name) == 0) {
+			size_t size = sym->st_size;
+			if(size != 1 && size != 2 && size != 4) size = 4;
+			*value = swaddr_read(sym->st_value, size);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool elf_find_function(uint32_t address, const char **name, uint32_t *start) {
+	int i;
+
+	for(i = 0; i < nr_symtab_entry; i ++) {
+		Elf32_Sym *sym = &symtab[i];
+		if(ELF32_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_size > 0 &&
+				address >= sym->st_value && address < sym->st_value + sym->st_size) {
+			*name = strtab + sym->st_name;
+			*start = sym->st_value;
+			return true;
+		}
+	}
+	return false;
+}
