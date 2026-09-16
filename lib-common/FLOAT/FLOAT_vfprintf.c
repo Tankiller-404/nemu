@@ -1,10 +1,44 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <assert.h>
 #include "FLOAT.h"
+
+#ifdef LINUX_RT
+#include <sys/mman.h>
+#endif
 
 extern char _vfprintf_internal;
 extern char _fpmaxtostr;
+extern char _ppfs_setargs;
 extern int __stdio_fwrite(char *buf, int len, FILE *stream);
+
+static uint8_t *find_bytes(uint8_t *start, int len,
+		const uint8_t *pattern, int pattern_len) {
+	int i;
+	for (i = 0; i <= len - pattern_len; i ++) {
+		if (memcmp(start + i, pattern, pattern_len) == 0) {
+			return start + i;
+		}
+	}
+	return NULL;
+}
+
+static void write_rel32(uint8_t *instruction, uint8_t opcode, void *target) {
+	int32_t displacement = (uint8_t *)target - (instruction + 5);
+	instruction[0] = opcode;
+	memcpy(instruction + 1, &displacement, sizeof(displacement));
+}
+
+#ifdef LINUX_RT
+static void make_writable(void *address) {
+	uintptr_t page = (uintptr_t)address & ~(uintptr_t)0xfff;
+	assert(mprotect((void *)page, 0x2000,
+			PROT_READ | PROT_WRITE | PROT_EXEC) == 0);
+}
+#else
+#define make_writable(address) ((void)(address))
+#endif
 
 __attribute__((used)) static int format_FLOAT(FILE *stream, FLOAT f) {
 	/* TODO: Format a FLOAT argument `f' and write the formating
@@ -16,7 +50,17 @@ __attribute__((used)) static int format_FLOAT(FILE *stream, FLOAT f) {
 	 */
 
 	char buf[80];
-	int len = sprintf(buf, "0x%08x", f);
+	int64_t value = f;
+	uint64_t magnitude = value < 0 ? (uint64_t)(-value) : (uint64_t)value;
+	uint32_t integer = magnitude >> 16;
+	uint32_t fraction = ((magnitude & 0xffff) * 1000000ull) >> 16;
+	int len;
+
+	if (value < 0) {
+		len = sprintf(buf, "-%u.%06u", integer, fraction);
+	} else {
+		len = sprintf(buf, "%u.%06u", integer, fraction);
+	}
 	return __stdio_fwrite(buf, len, stream);
 }
 
@@ -63,7 +107,40 @@ static void modify_vfprintf() {
 		return 0;
 	} else if (ppfs->conv_num <= CONV_S) {  /* wide char or string */
 #endif
+	uint8_t *start = (uint8_t *)&_vfprintf_internal;
+	uint8_t *call = NULL;
+	uint8_t *p;
+	int i;
 
+	make_writable(start);
+	for (i = 0; i < 0x600 - 5; i ++) {
+		if (start[i] == 0xe8) {
+			int32_t displacement;
+			memcpy(&displacement, start + i + 1, sizeof(displacement));
+			if (start + i + 5 + displacement == (uint8_t *)&_fpmaxtostr) {
+				call = start + i;
+				break;
+			}
+		}
+	}
+	assert(call != NULL);
+
+	/* Replace both possible x87 loads before the conversion call with NOPs. */
+	for (p = call - 40; p < call - 10; p ++) {
+		if ((p[0] == 0xdb && p[1] == 0x2a) ||
+				(p[0] == 0xdd && p[1] == 0x02)) {
+			p[0] = p[1] = 0x90;
+		}
+	}
+
+	/* Keep the original stack depth, but push the Q16.16 word from argptr. */
+	assert(call[-13] == 0x83 && call[-12] == 0xec && call[-11] == 0x0c);
+	assert(call[-10] == 0xdb && call[-9] == 0x3c && call[-8] == 0x24);
+	call[-11] = 0x08;
+	call[-10] = 0xff;
+	call[-9] = 0x32;
+	call[-8] = 0x90;
+	write_rel32(call, 0xe8, format_FLOAT);
 }
 
 static void modify_ppfs_setargs() {
@@ -164,7 +241,19 @@ static void modify_ppfs_setargs() {
 		++p;
 	}
 #endif
+	static const uint8_t double_branch[] = { 0x8d, 0x5a, 0x08, 0xdd, 0x02 };
+	static const uint8_t long_long_branch[] = {
+		0x8b, 0x3a, 0x8b, 0x6a, 0x04, 0x8d, 0x5a, 0x08
+	};
+	uint8_t *start = (uint8_t *)&_ppfs_setargs;
+	uint8_t *from;
+	uint8_t *to;
 
+	make_writable(start);
+	from = find_bytes(start, 0x200, double_branch, sizeof(double_branch));
+	to = find_bytes(start, 0x200, long_long_branch, sizeof(long_long_branch));
+	assert(from != NULL && to != NULL);
+	write_rel32(from, 0xe9, to);
 }
 
 void init_FLOAT_vfprintf() {
