@@ -6,7 +6,9 @@
 /* You will define this macro in PA4 */
 //#define HAS_DEVICE
 
+#ifndef NEMU_RELEASE
 #define DEBUG
+#endif
 #define LOG_FILE
 
 #include "debug.h"
