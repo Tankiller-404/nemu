@@ -1,6 +1,7 @@
 #include "monitor/monitor.h"
 #include "monitor/expr.h"
 #include "monitor/watchpoint.h"
+#include "monitor/elf.h"
 #include "nemu.h"
 
 #include <errno.h>
@@ -192,6 +193,33 @@ static int cmd_d(char *args) {
 	return 0;
 }
 
+static int cmd_bt(char *args) {
+	uint32_t frame = cpu.ebp;
+	uint32_t address = cpu.eip;
+	int depth;
+
+	(void)args;
+	for(depth = 0; depth < 32; depth ++) {
+		const char *name;
+		uint32_t start;
+		if(elf_find_function(address, &name, &start)) {
+			printf("#%d  0x%08x in %s+0x%x\n", depth, address,
+					name, address - start);
+		}
+		else {
+			printf("#%d  0x%08x in <unknown>\n", depth, address);
+		}
+
+		if(frame == 0) break;
+		uint32_t previous = swaddr_read(frame, 4);
+		uint32_t return_address = swaddr_read(frame + 4, 4);
+		if(return_address == 0 || previous <= frame) break;
+		address = return_address - 1;
+		frame = previous;
+	}
+	return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -207,7 +235,8 @@ static struct {
 	{"x", "Examine N 4-byte words starting at EXPR", cmd_x},
 	{"p", "Evaluate EXPR", cmd_p},
 	{"w", "Set a watchpoint for EXPR", cmd_w},
-	{"d", "Delete watchpoint N", cmd_d}
+	{"d", "Delete watchpoint N", cmd_d},
+	{"bt", "Display the stack frame chain", cmd_bt}
 };
 
 #define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0]))
