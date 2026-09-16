@@ -1,6 +1,5 @@
 #include "common.h"
 #include "monitor/elf.h"
-#include "memory/memory.h"
 #include <stdlib.h>
 #include <elf.h>
 
@@ -93,9 +92,7 @@ bool elf_get_variable(const char *name, uint32_t *value) {
 			continue;
 		}
 		if(strcmp(strtab + sym->st_name, name) == 0) {
-			size_t size = sym->st_size;
-			if(size != 1 && size != 2 && size != 4) size = 4;
-			*value = swaddr_read(sym->st_value, size);
+			*value = sym->st_value;
 			return true;
 		}
 	}
