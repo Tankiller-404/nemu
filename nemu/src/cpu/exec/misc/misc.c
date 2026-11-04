@@ -22,7 +22,7 @@ make_helper(int_i_b) {
 	if (syscall == 4 && (cpu.ebx == 1 || cpu.ebx == 2)) {
 		uint32_t i;
 		for (i = 0; i < cpu.edx; i ++) {
-			putchar(swaddr_read(cpu.ecx + i, 1));
+			putchar(swaddr_read(cpu.ecx + i, 1, R_DS));
 		}
 		fflush(stdout);
 		cpu.eax = cpu.edx;

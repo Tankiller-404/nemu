@@ -3,7 +3,7 @@
 #define instr stos
 
 make_helper(concat(stos_, SUFFIX)) {
-	MEM_W(cpu.edi, REG(R_EAX));
+	swaddr_write(cpu.edi, DATA_BYTE, REG(R_EAX), R_ES);
 	cpu.edi += (cpu.eflags.DF ? -DATA_BYTE : DATA_BYTE);
 
 	print_asm("stos" str(SUFFIX) " %%%s,%%es:(%%edi)", REG_NAME(R_EAX));

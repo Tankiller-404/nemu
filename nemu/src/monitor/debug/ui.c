@@ -135,7 +135,7 @@ static int cmd_x(char *args) {
 	}
 	for(i = 0; i < (uint32_t)count; i ++) {
 		uint32_t current = address + i * 4;
-		printf("0x%08x: 0x%08x\n", current, swaddr_read(current, 4));
+		printf("0x%08x: 0x%08x\n", current, swaddr_read(current, 4, R_DS));
 	}
 	return 0;
 }
@@ -211,8 +211,8 @@ static int cmd_bt(char *args) {
 		}
 
 		if(frame == 0) break;
-		uint32_t previous = swaddr_read(frame, 4);
-		uint32_t return_address = swaddr_read(frame + 4, 4);
+		uint32_t previous = swaddr_read(frame, 4, R_SS);
+		uint32_t return_address = swaddr_read(frame + 4, 4, R_SS);
 		if(return_address == 0 || previous <= frame) break;
 		address = return_address - 1;
 		frame = previous;

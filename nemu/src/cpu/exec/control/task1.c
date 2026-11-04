@@ -4,7 +4,7 @@ make_helper(call_rel_l) {
 	int32_t displacement = (int32_t)instr_fetch(eip + 1, 4);
 
 	cpu.esp -= 4;
-	swaddr_write(cpu.esp, 4, eip + 5);
+	swaddr_write(cpu.esp, 4, eip + 5, R_SS);
 	cpu.eip += displacement;
 
 	print_asm("call %x", eip + 5 + displacement);
@@ -15,7 +15,7 @@ make_helper(call_rm_l) {
 	int len = decode_rm_l(eip + 1);
 	uint32_t return_address = eip + len + 1;
 	cpu.esp -= 4;
-	swaddr_write(cpu.esp, 4, return_address);
+	swaddr_write(cpu.esp, 4, return_address, R_SS);
 	cpu.eip = op_src->val - (len + 1);
 	print_asm("call *%s", op_src->str);
 	return len + 1;
@@ -32,7 +32,7 @@ make_helper(je_si_b) {
 }
 
 make_helper(ret) {
-	uint32_t target = swaddr_read(cpu.esp, 4);
+	uint32_t target = swaddr_read(cpu.esp, 4, R_SS);
 	cpu.esp += 4;
 	cpu.eip = target - 1;
 
@@ -42,7 +42,7 @@ make_helper(ret) {
 
 make_helper(ret_i_w) {
 	uint16_t adjustment = instr_fetch(eip + 1, 2);
-	uint32_t target = swaddr_read(cpu.esp, 4);
+	uint32_t target = swaddr_read(cpu.esp, 4, R_SS);
 	cpu.esp += 4 + adjustment;
 	cpu.eip = target - 3;
 	print_asm("ret $0x%x", adjustment);

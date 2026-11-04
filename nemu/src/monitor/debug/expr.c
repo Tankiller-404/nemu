@@ -303,7 +303,7 @@ static uint32_t eval(int p, int q, bool *success) {
 		if(tokens[p].type == TK_NOT) {
 			return !rhs;
 		}
-		return swaddr_read(rhs, 4);
+		return swaddr_read(rhs, 4, R_DS);
 	}
 
 	*success = false;

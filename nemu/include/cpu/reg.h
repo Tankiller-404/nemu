@@ -6,6 +6,7 @@
 enum { R_EAX, R_ECX, R_EDX, R_EBX, R_ESP, R_EBP, R_ESI, R_EDI };
 enum { R_AX, R_CX, R_DX, R_BX, R_SP, R_BP, R_SI, R_DI };
 enum { R_AL, R_CL, R_DL, R_BL, R_AH, R_CH, R_DH, R_BH };
+enum { R_ES, R_CS, R_SS, R_DS, R_FS, R_GS };
 
 /* TODO: Re-organize the `CPU_state' structure to match the register
  * encoding scheme in i386 instruction format. For example, if we
@@ -29,6 +30,10 @@ typedef struct {
      /* Do NOT change the order of the GPRs' definitions. */
 
      swaddr_t eip;
+     struct { uint16_t selector; uint32_t base, limit; } sreg[6];
+     struct { uint32_t base; uint16_t limit; } gdtr;
+     union { uint32_t val; struct { uint32_t protect_enable:1, reserved:30, paging:1; }; } cr0;
+     union { uint32_t val; struct { uint32_t flags:12, page_directory_base:20; }; } cr3;
      
      union {
 		struct {

@@ -88,6 +88,12 @@ void restart() {
 	/* Set the initial instruction pointer. */
 	cpu.eip = ENTRY_START;
 	cpu.eflags.val = 0x2;
+	cpu.cr0.val = cpu.cr3.val = 0;
+	memset(&cpu.gdtr, 0, sizeof(cpu.gdtr));
+	memset(cpu.sreg, 0, sizeof(cpu.sreg));
+	int i;
+	for(i = 0; i < 6; i++) cpu.sreg[i].limit = 0xffffffff;
+	init_tlb();
 
 	/* Initialize DRAM. */
 	init_ddr3();
