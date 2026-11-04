@@ -3,6 +3,8 @@
 #include "monitor/watchpoint.h"
 #include "monitor/elf.h"
 #include "nemu.h"
+#include "memory/cache.h"
+#include <inttypes.h>
 
 #include <errno.h>
 #include <limits.h>
@@ -222,12 +224,35 @@ static int cmd_bt(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_page(char *args) {
+	if(skip_spaces(args) == NULL) { printf("Usage: page EXPR\n"); return 0; }
+	bool success = true;
+	uint32_t address = expr(args, &success);
+	if(!success) { printf("Invalid address expression.\n"); return 0; }
+	hwaddr_t physical; uint32_t pde, pte;
+	bool mapped = page_query(address, &physical, &pde, &pte);
+	printf("linear=0x%08x CR3=0x%08x PDE=0x%08x PTE=0x%08x\n", address, cpu.cr3.val, pde, pte);
+	if(mapped) printf("physical=0x%08x%s\n", physical, cpu.cr0.paging ? "" : " (paging disabled)");
+	else printf("Translation failed: absent/unsupported entry or physical address outside RAM.\n");
+	return 0;
+}
+static int cmd_cache(char *args) {
+	(void)args;
+	uint64_t h1, m1, h2, m2;
+	cache_stats(&h1, &m1, &h2, &m2);
+	printf("L1 hits=%" PRIu64 " misses=%" PRIu64 " cycles=%" PRIu64 "\n", h1, m1, h1 * 2 + m1 * 200);
+	printf("L2 hits=%" PRIu64 " misses=%" PRIu64 "\n", h2, m2);
+	return 0;
+}
+
 static struct {
 	char *name;
 	char *description;
 	int (*handler) (char *);
 } cmd_table [] = {
 	{"help", "Display information about supported commands", cmd_help},
+	{"page", "Inspect page translation of linear address EXPR", cmd_page},
+	{"cache", "Display cache hit/miss and illustrative L1 cycle counts", cmd_cache},
 	{"c", "Continue the execution of the program", cmd_c},
 	{"q", "Exit NEMU", cmd_q},
 	{"si", "Execute N instructions (default: 1)", cmd_si},

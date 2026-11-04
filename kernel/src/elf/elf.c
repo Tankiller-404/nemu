@@ -49,6 +49,10 @@ uint32_t loader() {
 		if(ph.p_type == PT_LOAD) {
 			uint8_t *segment = (uint8_t *)ph.p_vaddr;
 			nemu_assert(ph.p_filesz <= ph.p_memsz);
+#ifdef IA32_PAGE
+			if(ph.p_memsz == 0) continue;
+			segment = pa_to_va(mm_malloc(ph.p_vaddr, ph.p_memsz));
+#endif
 
 			#ifdef HAS_DEVICE
 			ide_read(segment, ELF_OFFSET_IN_DISK + ph.p_offset, ph.p_filesz);
@@ -72,9 +76,7 @@ uint32_t loader() {
 #ifdef IA32_PAGE
 	mm_malloc(KOFFSET - STACK_SIZE, STACK_SIZE);
 
-#ifdef HAS_DEVICE
 	create_video_mapping();
-#endif
 
 	write_cr3(get_ucr3());
 #endif
